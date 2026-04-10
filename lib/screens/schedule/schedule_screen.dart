@@ -148,9 +148,10 @@ class _EventCard extends StatelessWidget {
         DateFormat('HH:mm').format(event.dateTime);
     final isPast = event.isPast;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+    return Opacity(
       opacity: isPast ? 0.7 : 1.0,
+      child: Card(
+      margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -255,6 +256,7 @@ class _EventCard extends StatelessWidget {
           ],
         ),
       ),
+      ), // Card
     );
   }
 }
