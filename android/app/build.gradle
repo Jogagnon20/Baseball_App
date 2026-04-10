@@ -7,7 +7,6 @@ plugins {
 android {
     namespace "com.jogagnon20.baseballscore"
     compileSdk 34
-    ndkVersion flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -22,8 +21,8 @@ android {
         applicationId "com.jogagnon20.baseballscore"
         minSdk 21
         targetSdk 34
-        versionCode flutter.versionCode
-        versionName flutter.versionName
+        versionCode 1
+        versionName "1.0.0"
     }
 
     buildTypes {
