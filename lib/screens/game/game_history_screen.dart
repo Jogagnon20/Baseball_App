@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/game_provider.dart';
 import '../../models/game.dart';
-import '../../widgets/ad_banner_widget.dart';
 import 'game_detail_screen.dart';
 import 'live_scoring_screen.dart';
 
@@ -44,7 +43,6 @@ class GameHistoryScreen extends StatelessWidget {
                         itemBuilder: (_, i) => _GameCard(game: games[i]),
                       ),
           ),
-          const AdBannerWidget(),
         ],
       ),
     );

@@ -6,7 +6,6 @@ import '../../providers/schedule_provider.dart';
 import '../../providers/team_provider.dart';
 import '../../models/schedule_event.dart';
 import '../../models/team.dart';
-import '../../widgets/ad_banner_widget.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -115,7 +114,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         _EventCard(event: selectedEvents[i]),
                   ),
           ),
-          const AdBannerWidget(),
+          // Pas de AdBannerWidget ici — il est dans HomeScreen (barre de nav)
         ],
       ),
       floatingActionButton: FloatingActionButton(

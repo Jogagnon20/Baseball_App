@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/team_provider.dart';
 import '../../models/team.dart';
-import '../../widgets/ad_banner_widget.dart';
 import 'team_detail_screen.dart';
 
 class TeamsScreen extends StatelessWidget {
@@ -38,7 +37,6 @@ class TeamsScreen extends StatelessWidget {
                             _TeamCard(team: provider.teams[i]),
                       ),
           ),
-          const AdBannerWidget(),
         ],
       ),
       floatingActionButton: FloatingActionButton(

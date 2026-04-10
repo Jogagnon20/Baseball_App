@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../models/player_stats.dart';
-import '../../widgets/ad_banner_widget.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -65,7 +64,6 @@ class _StatsScreenState extends State<StatsScreen>
               ],
             ),
           ),
-          const AdBannerWidget(),
         ],
       ),
     );
