@@ -49,6 +49,20 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
     });
   }
 
+  // ── Prévisualisation auto-calcul selon le résultat ─────────────────────────
+
+  int _calcAutoRuns(Game game) {
+    final r1 = game.runner1st;
+    final r2 = game.runner2nd;
+    final r3 = game.runner3rd;
+    // Affiche combien de points seraient marqués dans les cas les plus courants
+    if (r3) return 1; // au moins 1 si coureur au 3e
+    if (r2) return 0;
+    return 0;
+  }
+
+  int _calcAutoRbi(Game game) => _rbi; // le provider gère le calcul final
+
   @override
   Widget build(BuildContext context) {
     final gameProvider = context.watch<GameProvider>();
@@ -193,22 +207,26 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
                                       () => _strikes = (_strikes + 1) % 4),
                                 ),
                                 const Divider(),
-                                _CountRow(
-                                  label: 'Points produits (RBI)',
-                                  count: _rbi,
-                                  max: 4,
+                                _AutoCountRow(
+                                  label: 'RBI',
+                                  manualCount: _rbi,
+                                  autoCount: _calcAutoRbi(game),
+                                  max: 7,
                                   color: Colors.amber,
                                   onTap: () =>
-                                      setState(() => _rbi = (_rbi + 1) % 5),
+                                      setState(() => _rbi = (_rbi + 1) % 8),
+                                  onReset: () => setState(() => _rbi = 0),
                                 ),
                                 const SizedBox(height: 4),
-                                _CountRow(
+                                _AutoCountRow(
                                   label: 'Points marqués',
-                                  count: _runsScored,
-                                  max: 4,
+                                  manualCount: _runsScored,
+                                  autoCount: _calcAutoRuns(game),
+                                  max: 7,
                                   color: Colors.orange,
                                   onTap: () => setState(
-                                      () => _runsScored = (_runsScored + 1) % 5),
+                                      () => _runsScored = (_runsScored + 1) % 8),
+                                  onReset: () => setState(() => _runsScored = 0),
                                 ),
                               ],
                             ),
@@ -638,16 +656,23 @@ class _ResultButtons extends StatelessWidget {
             spacing: 6,
             runSpacing: 6,
             children: (group['results'] as List<AtBatResult>).map((r) {
+              final isHitButton = r == AtBatResult.single ||
+                  r == AtBatResult.double_ ||
+                  r == AtBatResult.triple ||
+                  r == AtBatResult.homeRun;
               return ElevatedButton(
                 onPressed: () => onResult(r),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: group['color'] as Color,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  minimumSize: const Size(0, 32),
-                  textStyle: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.bold),
+                  padding: isHitButton
+                      ? const EdgeInsets.symmetric(horizontal: 20, vertical: 14)
+                      : const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: isHitButton ? const Size(72, 52) : const Size(0, 32),
+                  textStyle: TextStyle(
+                    fontSize: isHitButton ? 16 : 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 child: Text(r.displayName),
               );
@@ -656,6 +681,96 @@ class _ResultButtons extends StatelessWidget {
           const SizedBox(height: 8),
         ],
       ],
+    );
+  }
+}
+
+// ─── Compteur avec valeur auto affichée ──────────────────────────────────────
+
+/// Compteur qui affiche "AUTO" quand la valeur est 0 (le provider calculera
+/// automatiquement). Permet l'override manuel en tapant pour incrémenter.
+/// Appui long remet à 0 (retour en mode auto).
+class _AutoCountRow extends StatelessWidget {
+  final String label;
+  final int manualCount;
+  final int autoCount;
+  final int max;
+  final Color color;
+  final VoidCallback onTap;
+  final VoidCallback onReset;
+
+  const _AutoCountRow({
+    required this.label,
+    required this.manualCount,
+    required this.autoCount,
+    required this.max,
+    required this.color,
+    required this.onTap,
+    required this.onReset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isAuto = manualCount == 0;
+    final displayCount = manualCount;
+
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onReset,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11)),
+                if (isAuto)
+                  Text(
+                    'auto • appui long = reset',
+                    style: TextStyle(
+                        fontSize: 9,
+                        color: color.withAlpha(180),
+                        fontStyle: FontStyle.italic),
+                  ),
+              ],
+            ),
+          ),
+          if (isAuto)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withAlpha(30),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: color.withAlpha(100)),
+              ),
+              child: Text(
+                'AUTO',
+                style: TextStyle(
+                    color: color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            Row(
+              children: List.generate(max, (i) {
+                return Container(
+                  width: 14,
+                  height: 14,
+                  margin: const EdgeInsets.symmetric(horizontal: 1),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: i < displayCount ? color : Colors.transparent,
+                    border: Border.all(
+                      color: i < displayCount ? color : Colors.grey.shade400,
+                      width: 1.5,
+                    ),
+                  ),
+                );
+              }),
+            ),
+        ],
+      ),
     );
   }
 }

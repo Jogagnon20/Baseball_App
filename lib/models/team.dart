@@ -49,7 +49,7 @@ class Team {
     );
   }
 
-  String get fullName => '$city $name';
+  String get fullName => city.isEmpty ? name : '$city $name';
 
   @override
   String toString() => fullName;

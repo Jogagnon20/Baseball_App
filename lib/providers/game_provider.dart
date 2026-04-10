@@ -81,6 +81,15 @@ class GameProvider extends ChangeNotifier {
     if (_activeGame == null) return;
 
     final game = _activeGame!;
+
+    // Auto-calcul des points si le marqueur n'a pas ajusté manuellement le compteur
+    final autoRuns = runsScored > 0
+        ? runsScored
+        : _autoRuns(result, game.runner1st, game.runner2nd, game.runner3rd);
+    final autoRbi = rbi > 0
+        ? rbi
+        : _autoRbi(result, game.runner1st, game.runner2nd, game.runner3rd);
+
     final atBat = AtBat(
       id: _uuid.v4(),
       gameId: game.id,
@@ -90,8 +99,8 @@ class GameProvider extends ChangeNotifier {
       isTopInning: game.isTopInning,
       batterOrder: game.currentBatterIndex,
       result: result,
-      rbi: rbi,
-      runsScored: runsScored,
+      rbi: autoRbi,
+      runsScored: autoRuns,
       balls: balls,
       strikes: strikes,
       note: note,
@@ -226,6 +235,45 @@ class GameProvider extends ChangeNotifier {
         return {'r1': true, 'r2': r1, 'r3': r2};
       default:
         return {'r1': r1, 'r2': r2, 'r3': r3};
+    }
+  }
+
+  /// Calcule automatiquement les points marqués selon le résultat et les coureurs.
+  /// Règles standard : HR = tout le monde marque + le frappeur,
+  /// 3B = tous les coureurs marquent, 2B = coureurs sur 2B et 3B marquent,
+  /// 1B = coureur sur 3B marque, SAC = coureur sur 3B marque.
+  int _autoRuns(AtBatResult result, bool r1, bool r2, bool r3) {
+    switch (result) {
+      case AtBatResult.homeRun:
+        return 1 + (r1 ? 1 : 0) + (r2 ? 1 : 0) + (r3 ? 1 : 0);
+      case AtBatResult.triple:
+        return (r1 ? 1 : 0) + (r2 ? 1 : 0) + (r3 ? 1 : 0);
+      case AtBatResult.double_:
+        return (r2 ? 1 : 0) + (r3 ? 1 : 0);
+      case AtBatResult.single:
+        return r3 ? 1 : 0;
+      case AtBatResult.sacrifice:
+        return r3 ? 1 : 0;
+      default:
+        return 0;
+    }
+  }
+
+  /// Calcule automatiquement les RBI (identique aux points dans les cas standards).
+  int _autoRbi(AtBatResult result, bool r1, bool r2, bool r3) {
+    switch (result) {
+      case AtBatResult.homeRun:
+        return 1 + (r1 ? 1 : 0) + (r2 ? 1 : 0) + (r3 ? 1 : 0);
+      case AtBatResult.triple:
+        return (r1 ? 1 : 0) + (r2 ? 1 : 0) + (r3 ? 1 : 0);
+      case AtBatResult.double_:
+        return (r2 ? 1 : 0) + (r3 ? 1 : 0);
+      case AtBatResult.single:
+        return r3 ? 1 : 0;
+      case AtBatResult.sacrifice:
+        return r3 ? 1 : 0;
+      default:
+        return 0;
     }
   }
 

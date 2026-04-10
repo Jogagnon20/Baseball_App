@@ -5,6 +5,7 @@ import '../../providers/game_provider.dart';
 import '../../providers/team_provider.dart';
 import '../../models/game.dart';
 import '../../models/at_bat.dart';
+import '../../models/player.dart';
 import '../../widgets/scoreboard_widget.dart';
 import '../../widgets/ad_banner_widget.dart';
 
