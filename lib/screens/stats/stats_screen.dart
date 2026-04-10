@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/stats_provider.dart';
+import '../../providers/game_provider.dart';
 import '../../models/player_stats.dart';
+import '../../services/excel_service.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -29,6 +31,33 @@ class _StatsScreenState extends State<StatsScreen>
     super.dispose();
   }
 
+  Future<void> _exportStats(BuildContext context) async {
+    final statsProvider = context.read<StatsProvider>();
+    final gameProvider = context.read<GameProvider>();
+    if (statsProvider.teamStats.isEmpty && statsProvider.playerStats.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucune statistique à exporter')),
+      );
+      return;
+    }
+    try {
+      await ExcelService.exportStats(
+        teamStats: statsProvider.teamStats,
+        playerStats: statsProvider.playerStats,
+        games: gameProvider.games,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,6 +69,11 @@ class _StatsScreenState extends State<StatsScreen>
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => context.read<StatsProvider>().computeStats(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Exporter en Excel',
+            onPressed: () => _exportStats(context),
           ),
         ],
         bottom: TabBar(

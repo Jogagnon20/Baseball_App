@@ -35,6 +35,12 @@ dependencies:
   # Icônes
   cupertino_icons: ^1.0.8
 
+  # Import / export Excel
+  excel: ^4.0.6
+  file_picker: ^8.1.3
+  share_plus: ^10.0.2
+  path_provider: ^2.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

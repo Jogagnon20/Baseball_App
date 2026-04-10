@@ -656,16 +656,23 @@ class _ResultButtons extends StatelessWidget {
             spacing: 6,
             runSpacing: 6,
             children: (group['results'] as List<AtBatResult>).map((r) {
+              final isHitButton = r == AtBatResult.single ||
+                  r == AtBatResult.double_ ||
+                  r == AtBatResult.triple ||
+                  r == AtBatResult.homeRun;
               return ElevatedButton(
                 onPressed: () => onResult(r),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: group['color'] as Color,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  minimumSize: const Size(0, 32),
-                  textStyle: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.bold),
+                  padding: isHitButton
+                      ? const EdgeInsets.symmetric(horizontal: 20, vertical: 14)
+                      : const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: isHitButton ? const Size(72, 52) : const Size(0, 32),
+                  textStyle: TextStyle(
+                    fontSize: isHitButton ? 16 : 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 child: Text(r.displayName),
               );

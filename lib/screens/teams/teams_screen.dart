@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/team_provider.dart';
 import '../../models/team.dart';
+import '../../services/excel_service.dart';
 import 'team_detail_screen.dart';
 
 class TeamsScreen extends StatelessWidget {
@@ -17,6 +18,32 @@ class TeamsScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF1B2A3B),
         foregroundColor: Colors.white,
         actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.table_chart_outlined),
+            tooltip: 'Excel',
+            onSelected: (v) {
+              if (v == 'import') _importFromExcel(context);
+              if (v == 'template') _downloadTemplate(context);
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'import',
+                child: Row(children: [
+                  Icon(Icons.upload_file, size: 18),
+                  SizedBox(width: 8),
+                  Text('Importer depuis Excel'),
+                ]),
+              ),
+              PopupMenuItem(
+                value: 'template',
+                child: Row(children: [
+                  Icon(Icons.download, size: 18),
+                  SizedBox(width: 8),
+                  Text('Télécharger le modèle'),
+                ]),
+              ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showTeamDialog(context),
@@ -52,6 +79,71 @@ class TeamsScreen extends StatelessWidget {
       context: context,
       builder: (_) => _TeamFormDialog(team: team),
     );
+  }
+
+  Future<void> _importFromExcel(BuildContext context) async {
+    try {
+      final result = await ExcelService.importTeams();
+      if (result == null) return;
+      if (!context.mounted) return;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => _ImportPreviewDialog(result: result),
+      );
+      if (confirmed != true || !context.mounted) return;
+
+      final provider = context.read<TeamProvider>();
+      for (final teamData in result.teams) {
+        final team = await provider.addTeam(
+          name: teamData['name'] as String,
+          city: teamData['city'] as String,
+          logoColor: teamData['color'] as String,
+        );
+        for (final playerData in (teamData['players'] as List)) {
+          await provider.addPlayer(
+            teamId: team.id,
+            name: playerData['name'] as String,
+            number: playerData['number'] as int,
+            position: playerData['position'] as String,
+          );
+        }
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${result.teamCount} équipe(s) et ${result.playerCount} joueur(s) importés',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'import: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadTemplate(BuildContext context) async {
+    try {
+      await ExcelService.downloadTemplate();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -316,5 +408,70 @@ class _TeamFormDialogState extends State<_TeamFormDialog> {
       ));
     }
     if (mounted) Navigator.pop(context);
+  }
+}
+
+class _ImportPreviewDialog extends StatelessWidget {
+  final ImportResult result;
+  const _ImportPreviewDialog({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Aperçu de l\'import'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Icon(Icons.groups, color: Colors.blue, size: 18),
+                const SizedBox(width: 6),
+                Text('${result.teamCount} équipe(s) trouvée(s)'),
+              ]),
+              const SizedBox(height: 4),
+              Row(children: [
+                const Icon(Icons.person, color: Colors.green, size: 18),
+                const SizedBox(width: 6),
+                Text('${result.playerCount} joueur(s) trouvé(s)'),
+              ]),
+              if (result.errors.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Avertissements:',
+                  style: TextStyle(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ...result.errors.map(
+                  (e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text('• $e',
+                        style: const TextStyle(fontSize: 12, color: Colors.orange)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Annuler'),
+        ),
+        ElevatedButton(
+          onPressed: result.teamCount == 0
+              ? null
+              : () => Navigator.pop(context, true),
+          child: const Text('Importer'),
+        ),
+      ],
+    );
   }
 }
