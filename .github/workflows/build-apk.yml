@@ -5,7 +5,10 @@ on:
     branches:
       - main
       - 'claude/**'
-  workflow_dispatch:   # permet de déclencher manuellement depuis GitHub
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -17,60 +20,87 @@ jobs:
       - name: Checkout du code
         uses: actions/checkout@v4
 
-      # 2. Installer Java 17 (requis par le SDK Android)
+      # 2. Java 17 requis par Android SDK
       - name: Configurer Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Installer Flutter stable
+      # 3. Flutter stable 3.22
       - name: Installer Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x'
+          flutter-version: '3.22.3'
           channel: 'stable'
           cache: true
 
-      # 4. Vérifier l'installation
-      - name: Vérification Flutter
-        run: flutter doctor -v
+      # 4. Créer local.properties (absent du repo car gitignored)
+      - name: Créer local.properties
+        run: |
+          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+          echo "sdk.dir=$ANDROID_HOME"    >> android/local.properties
 
-      # 5. Télécharger les dépendances Dart/Flutter
+      # 5. Générer les icônes PNG pour chaque densité d'écran
+      - name: Générer les icônes de l'application
+        run: |
+          sudo apt-get install -y imagemagick 2>/dev/null
+          declare -A SIZES=(
+            ["mipmap-mdpi"]=48
+            ["mipmap-hdpi"]=72
+            ["mipmap-xhdpi"]=96
+            ["mipmap-xxhdpi"]=144
+            ["mipmap-xxxhdpi"]=192
+          )
+          for dir in "${!SIZES[@]}"; do
+            SIZE=${SIZES[$dir]}
+            HALF=$((SIZE / 2))
+            OUT="android/app/src/main/res/${dir}/ic_launcher.png"
+            mkdir -p "android/app/src/main/res/${dir}"
+            # Fond marine avec la lettre B
+            convert -size "${SIZE}x${SIZE}" xc:"#1B2A3B" \
+              -fill white \
+              -gravity Center \
+              -pointsize $((SIZE * 45 / 100)) \
+              -annotate 0 "B" \
+              "$OUT"
+          done
+
+      # 6. Télécharger les dépendances Flutter/Dart
       - name: flutter pub get
         run: flutter pub get
 
-      # 6. Compiler l'APK debug (prêt à installer sans signature)
+      # 7. Compiler l'APK debug
       - name: Compiler APK debug
         run: flutter build apk --debug --no-tree-shake-icons
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
 
-      # 7. Renommer l'APK avec la date pour s'y retrouver
+      # 8. Renommer avec la date
       - name: Renommer l'APK
         run: |
           DATE=$(date +%Y%m%d-%H%M)
           cp build/app/outputs/flutter-apk/app-debug.apk \
-             build/app/outputs/flutter-apk/BaseballScore-debug-${DATE}.apk
+             "build/app/outputs/flutter-apk/BaseballScore-${DATE}.apk"
+          echo "APK_NAME=BaseballScore-${DATE}.apk" >> $GITHUB_ENV
 
-      # 8. Uploader l'APK comme artefact téléchargeable
+      # 9. Uploader en artefact téléchargeable (30 jours)
       - name: Uploader l'APK
         uses: actions/upload-artifact@v4
         with:
-          name: BaseballScore-APK-debug
-          path: build/app/outputs/flutter-apk/BaseballScore-debug-*.apk
-          retention-days: 30   # gardé 30 jours
+          name: BaseballScore-APK
+          path: build/app/outputs/flutter-apk/BaseballScore-*.apk
+          retention-days: 30
 
-      # 9. Afficher un résumé dans l'interface GitHub
+      # 10. Résumé avec instructions
       - name: Résumé de la compilation
         run: |
-          APK_SIZE=$(du -sh build/app/outputs/flutter-apk/app-debug.apk | cut -f1)
-          echo "## APK compilé avec succès" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Taille:** ${APK_SIZE}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Comment installer sur votre tablette Android:**" >> $GITHUB_STEP_SUMMARY
-          echo "1. Télécharger l'APK depuis les artefacts ci-dessous" >> $GITHUB_STEP_SUMMARY
-          echo "2. Sur la tablette: Paramètres → Sécurité → Activer **Sources inconnues**" >> $GITHUB_STEP_SUMMARY
-          echo "3. Transférer l'APK sur la tablette (USB, Google Drive, email...)" >> $GITHUB_STEP_SUMMARY
-          echo "4. Ouvrir le fichier APK sur la tablette pour installer" >> $GITHUB_STEP_SUMMARY
+          SIZE=$(du -sh build/app/outputs/flutter-apk/app-debug.apk | cut -f1)
+          echo "## ✅ APK compilé avec succès"           >> $GITHUB_STEP_SUMMARY
+          echo ""                                        >> $GITHUB_STEP_SUMMARY
+          echo "**Fichier:** \`$APK_NAME\`"              >> $GITHUB_STEP_SUMMARY
+          echo "**Taille:** ${SIZE}"                     >> $GITHUB_STEP_SUMMARY
+          echo ""                                        >> $GITHUB_STEP_SUMMARY
+          echo "## Installer sur votre tablette Android" >> $GITHUB_STEP_SUMMARY
+          echo "1. Télécharger l'APK depuis **Artifacts** ci-dessous" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Tablette → Paramètres → Sécurité → Sources inconnues** : Activer" >> $GITHUB_STEP_SUMMARY
+          echo "3. Transférer le fichier .apk (USB, Drive, email…)" >> $GITHUB_STEP_SUMMARY
+          echo "4. Ouvrir le fichier sur la tablette → **Installer**" >> $GITHUB_STEP_SUMMARY
