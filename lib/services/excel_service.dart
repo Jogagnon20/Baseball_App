@@ -51,7 +51,7 @@ class ExcelService {
 
     // En-têtes
     teamSheet.appendRow([
-      TextCellValue('Ville'),
+      TextCellValue('Ville (facultatif)'),
       TextCellValue('Nom équipe'),
       TextCellValue('Couleur (bleu/rouge/vert/orange/violet/noir/marine/or)'),
     ]);
@@ -68,16 +68,21 @@ class ExcelService {
       TextCellValue('Capitales'),
       TextCellValue('rouge'),
     ]);
+    teamSheet.appendRow([
+      TextCellValue(''),
+      TextCellValue('Tigres'),
+      TextCellValue('orange'),
+    ]);
 
     // ── Feuille Joueurs ──────────────────────────────────────────────────
     final playerSheet = excel['Joueurs'];
 
     playerSheet.appendRow([
-      TextCellValue('Ville équipe'),
+      TextCellValue('Ville équipe (facultatif)'),
       TextCellValue('Nom équipe'),
       TextCellValue('Numéro'),
       TextCellValue('Nom du joueur'),
-      TextCellValue('Position (P/C/1B/2B/3B/SS/LF/CF/RF/DH/UT)'),
+      TextCellValue('Position (facultatif — P/C/1B/2B/3B/SS/LF/CF/RF/DH/UT)'),
     ]);
     _boldRow(playerSheet, 0);
 
@@ -102,6 +107,13 @@ class ExcelService {
       IntCellValue(7),
       TextCellValue('Pierre Lavoie'),
       TextCellValue('SS'),
+    ]);
+    playerSheet.appendRow([
+      TextCellValue(''),
+      TextCellValue('Tigres'),
+      IntCellValue(3),
+      TextCellValue('Alex Côté'),
+      TextCellValue(''),
     ]);
 
     await _shareExcel(excel, 'modele_equipes_baseball.xlsx');
@@ -134,7 +146,7 @@ class ExcelService {
         final name = _cellStr(row, 1);
         final colorName = _cellStr(row, 2).toLowerCase();
 
-        if (city.isEmpty || name.isEmpty) continue;
+        if (name.isEmpty) continue;
 
         final colorHex = _colorMap[colorName] ?? '#2196F3';
         final key = '$city|$name';
@@ -166,12 +178,15 @@ class ExcelService {
         final key = '$city|$teamName';
 
         if (!teamData.containsKey(key)) {
+          final label = city.isEmpty ? teamName : '$city $teamName';
           errors.add(
-              'Ligne ${r + 1} (Joueurs) : équipe "$city $teamName" non trouvée dans la feuille Équipes.');
+              'Ligne ${r + 1} (Joueurs) : équipe "$label" non trouvée dans la feuille Équipes.');
           continue;
         }
 
-        final validPos = Player.positions.contains(position) ? position : 'UT';
+        final validPos = position.isEmpty || !Player.positions.contains(position)
+            ? 'UT'
+            : position;
         (teamData[key]!['players'] as List).add({
           'name': playerName,
           'number': number,
